@@ -39,6 +39,9 @@ export function MapContainer() {
     } catch (err) {
       console.error("[v0] Error loading zones:", err)
       setError("흡연구역 데이터를 불러오는데 실패했습니다.")
+      setTimeout(() => {
+        setError(null)
+      }, 3000)
       // Fallback to sample data for demo
       setZones([
         {
