@@ -5,6 +5,7 @@ import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { apiService, type ZoneResponse } from "@/lib/api"
+import Image from "next/image"
 
 interface LocationMarker {
   id: number
@@ -18,6 +19,7 @@ interface LocationMarker {
   size: string
   date: string
   user: string
+  image?: string // Added image field to LocationMarker interface
 }
 
 export function MapContainer() {
@@ -56,7 +58,7 @@ export function MapContainer() {
           date: "2024-01-15",
           address: "서울특별시 중구 명동길 26",
           user: "관리자",
-          image: "",
+          image: "/modern-outdoor-smoking-booth.png", // Added sample image
         },
         {
           id: 2,
@@ -70,7 +72,7 @@ export function MapContainer() {
           date: "2024-01-16",
           address: "서울특별시 중구 을지로 281",
           user: "사용자1",
-          image: "",
+          image: "/modern-building-smoking-area.png", // Added sample image
         },
       ])
     } finally {
@@ -157,6 +159,7 @@ export function MapContainer() {
           size: zone.size,
           date: zone.date,
           user: zone.user,
+          image: zone.image, // Added image field to locationMarker
         }
 
         const marker = (window as any).L?.marker([zone.latitude, zone.longitude], { icon: customIcon })
@@ -217,6 +220,19 @@ export function MapContainer() {
         <div className="absolute bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <Card className="mx-4 mb-4 bg-card/95 backdrop-blur-sm border-border shadow-xl transition-all duration-300 hover:shadow-2xl rounded-t-xl">
             <CardContent className="p-4">
+              {selectedMarker.image && (
+                <div className="mb-4 rounded-lg overflow-hidden">
+                  <Image
+                    src={selectedMarker.image || "/placeholder.svg"}
+                    alt={`${selectedMarker.address} 흡연구역 사진`}
+                    width={300}
+                    height={200}
+                    className="w-full h-48 object-cover transition-transform duration-300 hover:scale-105"
+                    priority
+                  />
+                </div>
+              )}
+
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <div className="text-sm font-medium text-card-foreground mb-1">주소</div>

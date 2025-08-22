@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { User, Settings, LogOut, MapPin } from "lucide-react"
+import Link from "next/link"
 
 export function FloatingUserProfile() {
   return (
@@ -35,6 +36,12 @@ export function FloatingUserProfile() {
           <p className="text-xs text-muted-foreground">kim@example.com</p>
         </div>
         <DropdownMenuSeparator />
+        <Link href="/profile">
+          <DropdownMenuItem className="hover:bg-accent/50 transition-colors cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            프로필
+          </DropdownMenuItem>
+        </Link>
         <DropdownMenuItem className="hover:bg-accent/50 transition-colors cursor-pointer">
           <MapPin className="mr-2 h-4 w-4" />내 장소
         </DropdownMenuItem>
