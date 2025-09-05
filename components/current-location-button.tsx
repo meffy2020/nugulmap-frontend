@@ -1,13 +1,35 @@
 "use client"
 
-import { useState } from "react"
-import { MapPin, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Target, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export function CurrentLocationButton() {
+interface CurrentLocationButtonProps {
+  onLocationFound?: (location: { latitude: number; longitude: number; address: string }) => void
+}
+
+export function CurrentLocationButton({ onLocationFound }: CurrentLocationButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
 
+  useEffect(() => {
+    console.log("[v0] CurrentLocationButton component mounted and rendered")
+  }, [])
+
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ko`,
+      )
+      const data = await response.json()
+      return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+    } catch (error) {
+      console.log("[v0] Reverse geocoding failed:", error)
+      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+    }
+  }
+
   const handleCurrentLocation = async () => {
+    console.log("[v0] Current location button clicked")
     setIsLoading(true)
 
     try {
@@ -17,10 +39,13 @@ export function CurrentLocationButton() {
       }
 
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords
           console.log("[v0] Current location:", { latitude, longitude })
-          // Here you would typically update the map center
+
+          const address = await reverseGeocode(latitude, longitude)
+          onLocationFound?.({ latitude, longitude, address })
+
           setIsLoading(false)
         },
         (error) => {
@@ -45,13 +70,14 @@ export function CurrentLocationButton() {
       onClick={handleCurrentLocation}
       disabled={isLoading}
       size="icon"
-      className="h-12 w-12 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-lg hover:bg-background/90 hover:scale-105 transition-all duration-200 hover:shadow-xl"
+      className="h-10 w-10 rounded-full shadow-2xl hover:scale-110 transition-all duration-200 z-[9999]"
+      style={{
+        backgroundColor: "#D97742",
+        color: "white",
+        position: "relative",
+      }}
     >
-      {isLoading ? (
-        <Loader2 className="h-5 w-5 animate-spin text-foreground" />
-      ) : (
-        <MapPin className="h-5 w-5 text-foreground" />
-      )}
+      {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Target className="h-5 w-5" />}
     </Button>
   )
 }

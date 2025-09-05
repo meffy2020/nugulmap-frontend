@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -36,6 +36,58 @@ export function AddLocationModal({ isOpen, onClose, onZoneCreated }: AddLocation
   const [showSuccess, setShowSuccess] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen && !formData.address) {
+      getCurrentLocationForForm()
+    }
+  }, [isOpen])
+
+  const getCurrentLocationForForm = async () => {
+    try {
+      if (!navigator.geolocation) return
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+
+          // Get address from coordinates
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ko`,
+            )
+            const data = await response.json()
+            const address = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+
+            setFormData((prev) => ({
+              ...prev,
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+              address: address,
+            }))
+          } catch (error) {
+            console.log("[v0] Reverse geocoding failed:", error)
+            setFormData((prev) => ({
+              ...prev,
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+              address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+            }))
+          }
+        },
+        (error) => {
+          console.log("[v0] Location error:", error)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 60000,
+        },
+      )
+    } catch (error) {
+      console.log("[v0] Location error:", error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

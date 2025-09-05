@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,7 +22,12 @@ interface LocationMarker {
   image?: string // Added image field to LocationMarker interface
 }
 
-export function MapContainer() {
+export interface MapContainerRef {
+  handleZoneCreated: (zone: ZoneResponse) => void
+  centerOnLocation: (lat: number, lng: number) => void
+}
+
+export const MapContainer = forwardRef<MapContainerRef>((props, ref) => {
   const [selectedMarker, setSelectedMarker] = useState<LocationMarker | null>(null)
   const [zones, setZones] = useState<ZoneResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +44,7 @@ export function MapContainer() {
       setZones(zonesData)
       setError(null)
     } catch (err) {
-      console.error("[v0] Error loading zones:", err)
+      console.log("[v0] API not available, using sample data")
       setError("흡연구역 데이터를 불러오는데 실패했습니다.")
       setTimeout(() => {
         setError(null)
@@ -58,7 +63,7 @@ export function MapContainer() {
           date: "2024-01-15",
           address: "서울특별시 중구 명동길 26",
           user: "관리자",
-          image: "/modern-outdoor-smoking-booth.png", // Added sample image
+          image: "/modern-outdoor-smoking-booth.png",
         },
         {
           id: 2,
@@ -72,7 +77,7 @@ export function MapContainer() {
           date: "2024-01-16",
           address: "서울특별시 중구 을지로 281",
           user: "사용자1",
-          image: "/modern-building-smoking-area.png", // Added sample image
+          image: "/modern-building-smoking-area.png",
         },
       ])
     } finally {
@@ -116,8 +121,7 @@ export function MapContainer() {
 
         // Add OpenStreetMap tiles with dark theme
         L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          attribution: "",
           subdomains: "abcd",
           maxZoom: 20,
         }).addTo(mapInstance)
@@ -177,6 +181,15 @@ export function MapContainer() {
     setZones((prev) => [...prev, newZone])
   }
 
+  useImperativeHandle(ref, () => ({
+    handleZoneCreated,
+    centerOnLocation: (lat: number, lng: number) => {
+      if (map) {
+        map.setView([lat, lng], 16, { animate: true, duration: 1 })
+      }
+    },
+  }))
+
   return (
     <div className="relative w-full h-full">
       <div
@@ -194,7 +207,7 @@ export function MapContainer() {
       )}
 
       {error && (
-        <div className="absolute top-4 left-4 right-4 bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-md z-20">
+        <div className="absolute top-4 left-4 right-4 bg-red-500/10 border border-red-500/20 text-red-100 p-3 rounded-md z-20">
           {error}
         </div>
       )}
@@ -269,4 +282,6 @@ export function MapContainer() {
       )}
     </div>
   )
-}
+})
+
+MapContainer.displayName = "MapContainer"

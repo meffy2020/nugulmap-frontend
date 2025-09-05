@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
 
 export interface ZoneRequest {
   region: string
@@ -7,10 +7,8 @@ export interface ZoneRequest {
   description: string
   latitude: number
   longitude: number
-  size: string
   address: string
   user: string
-  image?: string
 }
 
 export interface ZoneResponse {
@@ -21,8 +19,6 @@ export interface ZoneResponse {
   description: string
   latitude: number
   longitude: number
-  size: string
-  date: string
   address: string
   user: string
   image?: string
@@ -30,27 +26,29 @@ export interface ZoneResponse {
 
 export interface UserResponse {
   id: number
-  email: string
   nickname: string
-  profileImage?: string
-  createdAt: string
+  email: string
+  profileImageUrl?: string
 }
 
-export interface UserRequest {
-  email: string
-  oauthId?: string
-  oauthProvider?: "kakao" | "google" | "naver"
+export interface NicknameUpdateRequest {
   nickname: string
-  profileImage?: string
-  createdAt?: string
 }
 
 class ApiService {
+  private getAuthToken(): string | null {
+    // This should be implemented based on your auth system
+    return localStorage.getItem("access_token")
+  }
+
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${API_BASE_URL}/api${endpoint}`
+    const authToken = this.getAuthToken()
+
     const response = await fetch(url, {
       headers: {
-        "Content-Type": "application/json",
+        ...(options?.headers?.["Content-Type"] ? {} : { "Content-Type": "application/json" }),
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         ...options?.headers,
       },
       ...options,
@@ -60,29 +58,57 @@ class ApiService {
       throw new Error(`API Error: ${response.status} ${response.statusText}`)
     }
 
-    return response.json()
+    const contentType = response.headers.get("content-type")
+    if (contentType && contentType.includes("application/json")) {
+      return response.json()
+    }
+    return {} as T
   }
 
-  // Zone API methods
-  async createZone(zoneData: ZoneRequest): Promise<ZoneResponse> {
+  async createZone(zoneData: ZoneRequest, imageFile?: File): Promise<ZoneResponse> {
+    const formData = new FormData()
+    formData.append("request", JSON.stringify(zoneData))
+    if (imageFile) {
+      formData.append("image", imageFile)
+    }
+
     return this.request<ZoneResponse>("/zones", {
       method: "POST",
-      body: JSON.stringify(zoneData),
+      headers: {}, // Let browser set Content-Type for FormData
+      body: formData,
     })
   }
 
-  async getAllZones(): Promise<ZoneResponse[]> {
-    return this.request<ZoneResponse[]>("/zones")
+  async getAllZones(latitude?: number, longitude?: number, radius?: number): Promise<ZoneResponse[]> {
+    let endpoint = "/zones"
+    const params = new URLSearchParams()
+
+    if (latitude !== undefined) params.append("latitude", latitude.toString())
+    if (longitude !== undefined) params.append("longitude", longitude.toString())
+    if (radius !== undefined) params.append("radius", radius.toString())
+
+    if (params.toString()) {
+      endpoint += `?${params.toString()}`
+    }
+
+    return this.request<ZoneResponse[]>(endpoint)
   }
 
   async getZone(id: number): Promise<ZoneResponse> {
     return this.request<ZoneResponse>(`/zones/${id}`)
   }
 
-  async updateZone(id: number, zoneData: ZoneRequest): Promise<ZoneResponse> {
+  async updateZone(id: number, zoneData: ZoneRequest, imageFile?: File): Promise<ZoneResponse> {
+    const formData = new FormData()
+    formData.append("request", JSON.stringify(zoneData))
+    if (imageFile) {
+      formData.append("image", imageFile)
+    }
+
     return this.request<ZoneResponse>(`/zones/${id}`, {
       method: "PUT",
-      body: JSON.stringify(zoneData),
+      headers: {}, // Let browser set Content-Type for FormData
+      body: formData,
     })
   }
 
@@ -92,27 +118,30 @@ class ApiService {
     })
   }
 
-  // User API methods
-  async createUser(userData: UserRequest): Promise<UserResponse> {
-    return this.request<UserResponse>("/users", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    })
+  async getCurrentUser(): Promise<UserResponse> {
+    return this.request<UserResponse>("/users/me")
   }
 
-  async getUser(id: number): Promise<UserResponse> {
-    return this.request<UserResponse>(`/users/${id}`)
-  }
-
-  async updateUser(id: number, userData: UserRequest): Promise<UserResponse> {
-    return this.request<UserResponse>(`/users/${id}`, {
+  async updateUserNickname(nickname: string): Promise<UserResponse> {
+    return this.request<UserResponse>("/users/me/nickname", {
       method: "PUT",
-      body: JSON.stringify(userData),
+      body: JSON.stringify({ nickname }),
     })
   }
 
-  async deleteUser(id: number): Promise<void> {
-    return this.request<void>(`/users/${id}`, {
+  async updateUserProfileImage(imageFile: File): Promise<UserResponse> {
+    const formData = new FormData()
+    formData.append("image", imageFile)
+
+    return this.request<UserResponse>("/users/me/profile-image", {
+      method: "PUT",
+      headers: {}, // Let browser set Content-Type for FormData
+      body: formData,
+    })
+  }
+
+  async deleteCurrentUser(): Promise<void> {
+    return this.request<void>("/users/me", {
       method: "DELETE",
     })
   }
